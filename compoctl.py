@@ -132,7 +132,7 @@ def backup():
 
     ran = False
     for name, service in cfg.get('services', {}).items():
-        backup_cmd = service.get('labels', {}).get('compoctl.backup', None)
+        backup_cmd = service.get('labels', {}).get('io.compoctl.backup.cmd', None)
         if not backup_cmd:
             continue
         p = compose('exec', name, *shlex.split(backup_cmd))
@@ -172,7 +172,7 @@ def restore():
 
     ran = False
     for name, service in cfg.get('services', {}).items():
-        cmd = service.get('labels', {}).get('compoctl.restore', None)
+        cmd = service.get('labels', {}).get('io.compoctl.restore', None)
         if not cmd:
             continue
         p = compose('exec', name, *shlex.split(cmd))
@@ -216,17 +216,12 @@ class ConsoleScript(cli2.ConsoleScript):
 
     def __init__(self, *args, **kwargs):
         self.add_commands(apply, backup, restore)
-        self['inspect'] = cli2.Group.factory(
-            'inspect',
-            'compoctl.introspection'
-        )
         self.compose_commands_add()
         super().__init__(*args, **kwargs)
 
     def compose_commands_add(self):
         commands = []
         def _cmd(name, doc):
-            @cli2.command(name=name)
             def cmd():
                 compose(name)
             cmd.__doc__ = doc

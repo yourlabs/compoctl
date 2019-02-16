@@ -14,8 +14,8 @@ services:
     environment:
       DB_ENGINE: django.db.backends.postgresql
       DB_HOST: postgres
-      DB_USER: django
-      DB_NAME: django
+      DB_USER: postgres
+      DB_NAME: postgres
       DB_PASSWORD: ${POSTGRES_PASSWORD-postgres}
       DB_PORT: 5432
 
@@ -26,19 +26,13 @@ services:
       driver: journald
     environment:
       POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: django
-      POSTGRES_DB: django
     volumes:
     - postgres-data:/var/lib/postgresql/data
     - ./backup/postgres:/backup
     labels:
-      com.compoctl.backup.cmd: pg_dumpall -U postgres -f /backup/data.dump
-      com.compoctl.restore.cmd: |
-          set -eux
-          dropdb django || echo could not drop db
-          createdb -O django -E UTF8 django
-          psql -U postgres -f /backup/data.dump &> /backup/restore.log
-      com.compoctl.restore.stop: django
+      io.compoctl.backup.cmd: pg_dumpall -U ${POSTGRES_USER-postgres} -f /backup/data.dump
+      io.compoctl.restore.cmd: |
+        psql -U ${POSTGRES_USER-postgres} -f /backup/data.dump &> /backup/restore.log
 
 volumes:
   postgres-data:
