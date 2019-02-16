@@ -1,0 +1,46 @@
+version: '3.5'
+
+services:
+  django:
+    image: betagouv/mrs:test
+    restart: unless-stopped
+    logging:
+      driver: journald
+    volumes:
+    - django-spooler-mail:/app/spooler/mail
+    - django-spooler-stat:/app/spooler/stat
+    depends_on:
+    - postgres
+    environment:
+      DB_ENGINE: django.db.backends.postgresql
+      DB_HOST: postgres
+      DB_USER: django
+      DB_NAME: django
+      DB_PASSWORD: ${POSTGRES_PASSWORD-postgres}
+      DB_PORT: 5432
+
+  postgres:
+    image: postgres:10
+    restart: unless-stopped
+    logging:
+      driver: journald
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: django
+      POSTGRES_DB: django
+    volumes:
+    - postgres-data:/var/lib/postgresql/data
+    - ./backup/postgres:/backup
+    labels:
+      com.compoctl.backup.cmd: pg_dumpall -U postgres -f /backup/data.dump
+      com.compoctl.restore.cmd: |
+          set -eux
+          dropdb django || echo could not drop db
+          createdb -O django -E UTF8 django
+          psql -U postgres -f /backup/data.dump &> /backup/restore.log
+      com.compoctl.restore.stop: django
+
+volumes:
+  postgres-data:
+  django-spooler-mail:
+  django-spooler-stat:
