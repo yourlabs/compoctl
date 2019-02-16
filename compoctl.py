@@ -1,22 +1,37 @@
 """
 Wrapper around docker-compose with fetch support and extra commands.
 
-So, compoctl up will do the same as docker-compose up. That said, we added an
-``apply`` command that chains a snapshot/pull/down/up/logs/ps. compoctl will
-support URLs for -f arguments, hence::
+So, compoctl up will do the same as docker-compose up. Added:
+
+- apply command that chains a pull/down/up/logs/ps, supports -f http://..
+- backup/restore commands that use ./backup directory.
+
+Docker compose needs to mount ./backup and define backup and restore commands,
+example config:
+
+  postgres:
+    volumes:
+    - postgres-data:/var/lib/postgresql/data
+    - ./backup/postgres:/backup
+    labels:
+      io.compoctl.backup.cmd: pg_dumpall -U ${POSTGRES_USER-postgres} -f /backup/data.dump
+      io.compoctl.restore.cmd: |
+        psql -U ${POSTGRES_USER-postgres} -f /backup/data.dump &> /backup/restore.log
+
+Usage examples:
 
     # example to start dev cluster
-    compoctl apply -f https://raw.../docker-compose.yml -f https://raw../docker-compose/dev.yml
+    compoctl apply -f https://raw...compose.yml -f https://raw..compose.dev.yml
 
     # example to start an environment you maintain on the network
     echo $staging_override > docker-compose.override.yml
     echo $ssh_key > ~/.ssh/id_ed25519
-    rsync docker-compose.* deploy@server:/home/staging
+    scp -r docker-compose.* deploy@server:/home/staging
     ssh deploy@server bash -exc "web_image=your/image:$CI_COMMIT_REF compoctl -p /home/staging apply"
 
     # of course, bash is swappable with an inventoryless playbook that could
     # also setup system dependencies (your load-balancer, monitoring
-    # compose-declared stacks)
+    # compose-declared stacks...)
     ansible-apply -f tasks/deploy.yml override=$staging_override deploy@staging.example.com
 
 """
@@ -39,11 +54,13 @@ def apply():
     Chain pull/down/up/logs/ps.
 
     compoctl -f ./foo.yml apply
+
     # will run:
     docker-compose -f ./foo.yml pull
     docker-compose -f ./foo.yml down
     docker-compose -f ./foo.yml up -d
     docker-compose -f ./foo.yml logs
+    docker-compose -f ./foo.yml ps
     """
     cmds = [
         ['pull'],
@@ -77,29 +94,28 @@ def compose(command, *args):
 @cli2.command(color=cli2.YELLOW)
 def backup():
     """
-    Execute the container backup commands.
+    Backup data into ./backup.
 
     Example configuration that makes it work as-is:
 
         volumes:
         - ./backup/postgres:/backup
         labels:
-          compoctl.backup: pg_dumpall -U postgres -f /backup/data.dump
+          io.compoctl.backup.cmd: pg_dumpall -U postgres -f /backup/data.dump
+
+    This will dump pg data into ./backup/postgres, and also export
+    docker-compose running config into ./backup/docker-compose.restore.yml
+
+    It will also execute the docker-compose.backup.yml if it exists. This is
+    were you can spawn a container that mounts ./backup and proceeds to the
+    secure backup export over the network that you want for production.
+
+    To prevent permission issues, containers should at no time write the
+    ./backup directory itself.
     """
     if not os.path.exists('./backup'):
         yield 'Creating ./backup'
         os.makedirs('./backup')
-
-    '''
-    for i in glob.glob('docker-compose*.yml'):
-        yield f'Copying {i}'
-        try:
-            shutil.copyfile(i, f'./backup/{i}')
-        except PermissionError:
-            yield cli2.RED + 'Permission error writing ./backup' + cli2.RESET
-            yield cli2.GREEN + 'HINT' + cli2.RESET + ' Try sudo -E compoctl'
-            raise cli2.Cli2Exception('Permission error')
-    '''
 
     images = dict()
     cids = subprocess.check_output(
@@ -155,6 +171,11 @@ def restore():
         - ./backup/postgres:/backup
         labels:
           compoctl.restore: psql -U postgres -f /backup/data.dump
+
+    Note that the ./backup directory must have been provisioned with the backup
+    command priorly.
+
+    Also, the cluster will be unusable/down during the restore operation.
     """
     if not os.path.exists('./backup/docker-compose.restore.yml'):
         raise cli2.Cli2Exception('./backup not found !')
@@ -182,7 +203,6 @@ def restore():
 
     if not ran:
         yield cli2.RED + 'No restore cmd found: no data restore !' + cli2.RESET
-
 
 
 class ConsoleScript(cli2.ConsoleScript):
