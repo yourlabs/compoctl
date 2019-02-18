@@ -45,6 +45,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 import yaml
 
 
@@ -130,7 +131,7 @@ def backup():
         ).decode('utf8')
         cfg = json.loads(cfg)
         service = cfg[0]['Config']['Labels']['com.docker.compose.service']
-        image = cfg[0]['Image']
+        image = cfg[0]['Config']['Image']
         images[service] = image
 
     cfg = subprocess.check_output(
@@ -165,6 +166,9 @@ def restore():
     """
     Copy docker-compose.yml back from ./backup and run restore commands.
 
+    This is a destructive operation that will delete all volumes except the
+    backup volume, up each service one by one and apply the restore command.
+
     Example configuration that makes it work as-is:
 
         volumes:
@@ -185,24 +189,59 @@ def restore():
         'docker-compose.restore.yml',
     )
 
-    console_script.options += ['-f', 'docker-compose.restore.yml']
+    console_script.options += ['-f', './docker-compose.restore.yml']
+
+    compose('pull')
+    compose('down')
 
     with open('docker-compose.restore.yml', 'r') as fh:
         content = fh.read()
     cfg = yaml.load(content)
 
+    project = os.getcwd().split('/')[-1]
     ran = False
     for name, service in cfg.get('services', {}).items():
-        cmd = service.get('labels', {}).get('io.compoctl.restore', None)
+        cmd = service.get('labels', {}).get('io.compoctl.restore.cmd', None)
         if not cmd:
             continue
-        p = compose('exec', name, *shlex.split(cmd))
+
+        for volume in service.get('volumes', []):
+            parts = volume.split(':')
+            if 'backup' in parts[0]:
+                continue
+            elif '/' in parts[0]:
+                print(cli2.RED + 'rm -f ' + cli2.RESET + parts[0])
+                shutil.rmtree(parts[0])
+            else:
+                volume = '_'.join([project, name])
+                print(cli2.RED + 'docker volume rm ' + cli2.RESET + volume)
+                p = subprocess.Popen(
+                    ['docker', 'volume', 'rm', volume],
+                    stderr=sys.stderr,
+                    stdin=sys.stdin,
+                    stdout=sys.stdout,
+                )
+                p.communicate()
+
+        p = compose('up', '-d', name)
         if p.returncode != 0:
-            raise cli2.Cli2Exception('Backup exited with non-0 !')
+            raise cli2.Cli2Exception(f'Start {name} non-0 !')
+
+        print(cli2.YELLOW + 'Waiting service up: ' + cli2.RESET + name)
+        time.sleep(5)
+        p = compose('exec', name, *shlex.split(cmd))
+
+        if p.returncode != 0:
+            raise cli2.Cli2Exception(f'Restore {name} exited with non-0 !')
+
         ran = True
 
     if not ran:
         yield cli2.RED + 'No restore cmd found: no data restore !' + cli2.RESET
+
+    compose('up', '-d')
+    compose('logs')
+    compose('ps')
 
 
 class ConsoleScript(cli2.ConsoleScript):
