@@ -105,7 +105,7 @@ def backup():
           io.compoctl.backup.cmd: pg_dumpall -U postgres -f /backup/data.dump
 
     This will dump pg data into ./backup/postgres, and also export
-    docker-compose running config into ./backup/docker-compose.restore.yml
+    docker-compose running config into ./backup/docker-compose._restore.yml
 
     It will also execute the docker-compose.backup.yml if it exists. This is
     were you can spawn a container that mounts ./backup and proceeds to the
@@ -142,7 +142,7 @@ def backup():
     for service, image in images.items():
         cfg['services'][service]['image'] = image
     restore_content = yaml.dump(cfg)
-    restore_path = './backup/docker-compose.restore.yml'
+    restore_path = './backup/docker-compose._restore.yml'
     yield f'Writing {restore_path} with hard coded images'
     with open(restore_path, 'w+') as fh:
         fh.write(restore_content)
@@ -181,20 +181,20 @@ def restore():
 
     Also, the cluster will be unusable/down during the restore operation.
     """
-    if not os.path.exists('./backup/docker-compose.restore.yml'):
+    if not os.path.exists('./backup/docker-compose._restore.yml'):
         raise cli2.Cli2Exception('./backup not found !')
 
     shutil.copyfile(
-        './backup/docker-compose.restore.yml',
-        'docker-compose.restore.yml',
+        './backup/docker-compose._restore.yml',
+        'docker-compose._restore.yml',
     )
 
-    console_script.options += ['-f', './docker-compose.restore.yml']
+    console_script.options += ['-f', './docker-compose._restore.yml']
 
     compose('pull')
     compose('down')
 
-    with open('docker-compose.restore.yml', 'r') as fh:
+    with open('docker-compose._restore.yml', 'r') as fh:
         content = fh.read()
     cfg = yaml.load(content)
 
