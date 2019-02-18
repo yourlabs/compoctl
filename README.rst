@@ -6,7 +6,7 @@ compoctl backup
 
 Backup data into ./backup.
 
-Example configuration that makes it work as-is:
+Example configuration that makes it work as-is::
 
     volumes:
     - ./backup/postgres:/backup
@@ -31,7 +31,7 @@ Copy docker-compose.yml back from ./backup and run restore commands.
 This is a destructive operation that will delete all volumes except the
 backup volume, up each service one by one and apply the restore command.
 
-Example configuration that makes it work as-is:
+Example configuration that makes it work as-is::
 
     volumes:
     - ./backup/postgres:/backup
@@ -46,16 +46,16 @@ Also, the cluster will be unusable/down during the restore operation.
 compoctl apply
 --------------
 
-Chain pull/down/up/logs/ps.
+Chain pull/down/up/logs/ps::
 
-compoctl -f ./foo.yml apply
+    compoctl -f ./foo.yml apply
 
-# will run:
-docker-compose -f ./foo.yml pull
-docker-compose -f ./foo.yml down
-docker-compose -f ./foo.yml up -d
-docker-compose -f ./foo.yml logs
-docker-compose -f ./foo.yml ps
+    # will run:
+    docker-compose -f ./foo.yml pull
+    docker-compose -f ./foo.yml down
+    docker-compose -f ./foo.yml up -d
+    docker-compose -f ./foo.yml logs
+    docker-compose -f ./foo.yml ps
 
 Development status
 ------------------
