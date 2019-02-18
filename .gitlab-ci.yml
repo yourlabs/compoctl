@@ -1,0 +1,5 @@
+ pypi:
+   stage: deploy
+   image: yourlabs/python
+   except: [tags]
+   script: shyml twine | bash -eux
