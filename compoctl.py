@@ -299,7 +299,7 @@ class ConsoleScript(cli2.ConsoleScript):
 
         def get(name):
             if name.startswith('http') and '://' in name:
-                content = requests.get(name).content
+                content = requests.get(name).content.decode('utf8')
                 name = name.split('/')[-1]
                 with open(name, 'w+') as fh:
                     fh.write(content)
