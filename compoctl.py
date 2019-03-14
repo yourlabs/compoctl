@@ -65,6 +65,7 @@ def apply():
     """
     cmds = [
         ['pull'],
+        ['build'],
         ['down'],
         ['up', '-d'],
         ['logs'],
