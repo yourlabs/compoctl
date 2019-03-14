@@ -1,5 +1,28 @@
-compoctl: backup/restore/apply for docker-compose
-=================================================
+compoctl: backup/restore/apply one-liner pipelines for docker-compose
+=====================================================================
+
+Install with pip install compoctl
+
+A wrapper for the long docker-compose command that also adds a few features
+that should be considered experimental, in waiting for refutation or upstream
+contribution - which won't break BC because compoctl decorates docker-compose
+commands.
+
+compoctl apply: the one-liner pipeline for docker-compose
+---------------------------------------------------------
+
+Chain pull/build/down/up/logs/ps, nice to have for hacking and even more in
+automated deploys::
+
+    compoctl -f ./foo.yml apply
+
+    # will run:
+    docker-compose -f ./foo.yml pull
+    docker-compose -f ./foo.yml build
+    docker-compose -f ./foo.yml down
+    docker-compose -f ./foo.yml up -d
+    docker-compose -f ./foo.yml logs
+    docker-compose -f ./foo.yml ps
 
 compoctl backup
 ---------------
@@ -23,6 +46,10 @@ secure backup export over the network that you want for production.
 To prevent permission issues, containers should at no time write the
 ./backup directory itself.
 
+pre-POC state: waiting for an example chaining a docker-compose.backup.yml that
+would spawn restic and rclone to backup the backup on a remote collection (or
+implement retention policy feature into duplicity).
+
 compoctl restore
 ----------------
 
@@ -42,29 +69,3 @@ Note that the ./backup directory must have been provisioned with the backup
 command priorly.
 
 Also, the cluster will be unusable/down during the restore operation.
-
-compoctl apply
---------------
-
-Chain pull/down/up/logs/ps::
-
-    compoctl -f ./foo.yml apply
-
-    # will run:
-    docker-compose -f ./foo.yml pull
-    docker-compose -f ./foo.yml down
-    docker-compose -f ./foo.yml up -d
-    docker-compose -f ./foo.yml logs
-    docker-compose -f ./foo.yml ps
-
-Development status
-------------------
-
-POC working, will need tweaking to support more complex operations. The
-objective is to stabilize the commands before proposing them upstream to
-docker-compose.
-
-Install
--------
-
-Install with pip: pip install compoctl
