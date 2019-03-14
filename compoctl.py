@@ -3,7 +3,7 @@ Wrapper around docker-compose with fetch support and extra commands.
 
 So, compoctl up will do the same as docker-compose up. Added:
 
-- apply command that chains a pull/down/up/logs/ps, supports -f http://..
+- apply command that chains a pull/build/down/up/logs/ps, supports -f http://..
 - backup/restore commands that use ./backup directory.
 
 Docker compose needs to mount ./backup and define backup and restore commands,
@@ -52,12 +52,13 @@ import yaml
 @cli2.command(color=cli2.GREEN)
 def apply():
     """
-    Chain pull/down/up/logs/ps.
+    Chain pull/build/down/up/logs/ps.
 
     compoctl -f ./foo.yml apply
 
     # will run:
     docker-compose -f ./foo.yml pull
+    docker-compose -f ./foo.yml build
     docker-compose -f ./foo.yml down
     docker-compose -f ./foo.yml up -d
     docker-compose -f ./foo.yml logs
