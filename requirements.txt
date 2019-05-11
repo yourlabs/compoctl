@@ -1,3 +1,2 @@
 cli2
 pyyaml
-docker-compose
