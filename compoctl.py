@@ -29,11 +29,6 @@ Usage examples:
     scp -r docker-compose.* deploy@server:/home/staging
     ssh deploy@server bash -exc "web_image=your/image:$CI_COMMIT_REF compoctl -p /home/staging apply"
 
-    # of course, bash is swappable with an inventoryless playbook that could
-    # also setup system dependencies (your load-balancer, monitoring
-    # compose-declared stacks...)
-    ansible-apply -f tasks/deploy.yml override=$staging_override deploy@staging.example.com
-
 """
 
 import cli2
