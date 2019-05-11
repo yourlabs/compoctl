@@ -63,7 +63,7 @@ Example configuration that makes it work as-is::
     volumes:
     - ./backup/postgres:/backup
     labels:
-      compoctl.restore: psql -U postgres -f /backup/data.dump
+      io.yourlabs.restore.cmd: psql -U postgres -f /backup/data.dump
 
 Note that the ./backup directory must have been provisioned with the backup
 command priorly.
