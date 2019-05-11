@@ -14,8 +14,8 @@ example config:
     - postgres-data:/var/lib/postgresql/data
     - ./backup/postgres:/backup
     labels:
-      io.compoctl.backup.cmd: pg_dumpall -U ${POSTGRES_USER-postgres} -f /backup/data.dump
-      io.compoctl.restore.cmd: |
+      io.yourlabs.backup.cmd: pg_dumpall -U ${POSTGRES_USER-postgres} -f /backup/data.dump
+      io.yourlabs.restore.cmd: |
         psql -U ${POSTGRES_USER-postgres} -f /backup/data.dump &> /backup/restore.log
 
 Usage examples:
@@ -104,7 +104,7 @@ def backup():
         volumes:
         - ./backup/postgres:/backup
         labels:
-          io.compoctl.backup.cmd: pg_dumpall -U postgres -f /backup/data.dump
+          io.yourlabs.backup.cmd: pg_dumpall -U postgres -f /backup/data.dump
 
     This will dump pg data into ./backup/postgres, and also export
     docker-compose running config into ./backup/docker-compose._restore.yml
@@ -151,7 +151,7 @@ def backup():
 
     ran = False
     for name, service in cfg.get('services', {}).items():
-        backup_cmd = service.get('labels', {}).get('io.compoctl.backup.cmd', None)
+        backup_cmd = service.get('labels', {}).get('io.yourlabs.backup.cmd', None)
         if not backup_cmd:
             continue
         p = compose('exec', name, *shlex.split(backup_cmd))
@@ -203,7 +203,7 @@ def restore():
     project = os.getcwd().split('/')[-1]
     ran = False
     for name, service in cfg.get('services', {}).items():
-        cmd = service.get('labels', {}).get('io.compoctl.restore.cmd', None)
+        cmd = service.get('labels', {}).get('io.yourlabs.restore.cmd', None)
         if not cmd:
             continue
 

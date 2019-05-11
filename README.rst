@@ -34,7 +34,7 @@ Example configuration that makes it work as-is::
     volumes:
     - ./backup/postgres:/backup
     labels:
-      io.compoctl.backup.cmd: pg_dumpall -U postgres -f /backup/data.dump
+      io.yourlabs.backup.cmd: pg_dumpall -U postgres -f /backup/data.dump
 
 This will dump pg data into ./backup/postgres, and also export
 docker-compose running config into ./backup/docker-compose.restore.yml

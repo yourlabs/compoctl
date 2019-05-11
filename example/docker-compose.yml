@@ -30,8 +30,8 @@ services:
     - postgres-data:/var/lib/postgresql/data
     - ./backup/postgres:/backup
     labels:
-      io.compoctl.backup.cmd: pg_dumpall -U ${POSTGRES_USER-postgres} -f /backup/data.dump
-      io.compoctl.restore.cmd: psql -U ${POSTGRES_USER-postgres} -f /backup/data.dump
+      io.yourlabs.backup.cmd: pg_dumpall -U ${POSTGRES_USER-postgres} -f /backup/data.dump
+      io.yourlabs.restore.cmd: psql -U ${POSTGRES_USER-postgres} -f /backup/data.dump
 
 volumes:
   postgres-data:
