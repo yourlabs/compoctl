@@ -73,17 +73,17 @@ def apply():
             raise cli2.Cli2Exception('Return code: ' + str(p.returncode))
 
 
-def compose(command, *args):
-    compose_argv = ['docker-compose'] + console_script.options
-    compose_argv.append(command)
-    compose_argv += list(args) + console_script.args
+def compose(command, *args, **kwargs):
+    compose_argv = console_script.compose_cmd(command, *args)
     print(cli2.YELLOW + 'Running ' + cli2.RESET + ' '.join(compose_argv))
+
+    kwargs.setdefault('stderr', sys.stderr)
+    kwargs.setdefault('stdin', sys.stdin)
+    kwargs.setdefault('stdout', sys.stdout)
 
     p = subprocess.Popen(
         compose_argv,
-        stderr=sys.stderr,
-        stdin=sys.stdin,
-        stdout=sys.stdout,
+        **kwargs
     )
     p.communicate()
     return p
@@ -131,10 +131,7 @@ def backup():
         image = cfg[0]['Config']['Image']
         images[service] = image
 
-    cfg = subprocess.check_output(
-        'docker-compose config', shell=True
-    ).decode('utf8')
-    cfg = yaml.safe_load(cfg)
+    cfg = console_script.config()
 
     for service, image in images.items():
         cfg['services'][service]['image'] = image
@@ -149,7 +146,7 @@ def backup():
         backup_cmd = service.get('labels', {}).get('io.yourlabs.backup.cmd', None)
         if not backup_cmd:
             continue
-        p = compose('exec', name, *shlex.split(backup_cmd))
+        p = compose('exec', name, 'sh', '-c', backup_cmd)
         if p.returncode != 0:
             raise cli2.Cli2Exception('Backup exited with non-0 !')
         ran = True
@@ -279,7 +276,7 @@ class ConsoleScript(cli2.ConsoleScript):
         commands = []
         def _cmd(name, doc):
             def cmd():
-                compose(name)
+                compose(name, *console_script.args)
             cmd.__doc__ = doc
             cmd.__name__ = name
             return cmd
@@ -293,6 +290,7 @@ class ConsoleScript(cli2.ConsoleScript):
         self.options = []
         self.command = 'help'
         self.args = []
+        self.files = []
 
         def get(name):
             if name.startswith('http') and '://' in name:
@@ -310,7 +308,9 @@ class ConsoleScript(cli2.ConsoleScript):
                 continue
 
             elif arg == '-f':
-                self.options += ['-f', get(self.parser.argv_all[num + 1])]
+                f = self.parser.argv_all[num + 1]
+                self.options += ['-f', get(f)]
+                self.files.append(f)
                 skip = True
 
             elif arg.startswith('--file'):
@@ -330,9 +330,25 @@ class ConsoleScript(cli2.ConsoleScript):
             elif arg in self.parser.argv:
                 self.args.append(arg)
 
+        if not command_found:
+            print(cli2.RED, 'Command not found')
+
+        if not self.files:
+            self.files.append('docker-compose.yml')
+            if os.path.exists('docker-compose.override.yml'):
+                self.files.append('docker-compose.override.yml')
+
+    def config(self, service=None):
+        return yaml.safe_load(
+            subprocess.check_output(
+                self.compose_cmd('config')))
+
     def call(self, command):
         self.compose_argv_handle()
         return super().call(command)
+
+    def compose_cmd(self, *args):
+        return ['docker-compose'] + self.options + list(args)
 
 
 console_script = ConsoleScript(__doc__)
