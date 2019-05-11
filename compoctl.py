@@ -139,7 +139,7 @@ def backup():
     cfg = subprocess.check_output(
         'docker-compose config', shell=True
     ).decode('utf8')
-    cfg = yaml.load(cfg)
+    cfg = yaml.safe_load(cfg)
 
     for service, image in images.items():
         cfg['services'][service]['image'] = image
@@ -198,7 +198,7 @@ def restore():
 
     with open('docker-compose._restore.yml', 'r') as fh:
         content = fh.read()
-    cfg = yaml.load(content)
+    cfg = yaml.safe_load(content)
 
     project = os.getcwd().split('/')[-1]
     ran = False
